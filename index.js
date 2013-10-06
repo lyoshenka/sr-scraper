@@ -2,25 +2,21 @@
 
 var _         = require('underscore')
   , async     = require('async')
-//  , phantom   = require('phantom')
   , phantom   = require('node-phantom-ws')
   , urls      = require('./urls')
-  , teamEval  = require('./team')
-  , teamsEval = require('./teams')
+  , teamEval  = require('./parseSingleTeam')
+  , teamsEval = require('./parseTeamList')
   , db        = require('monk')('localhost/scraper')
   ;
-
-var jquery     = "http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js",
-    underscore = "http://underscorejs.org/underscore-min.js";
-
-var plugins = [jquery, underscore];
 
 var getPage = function (url, callback) {
   phantom.create(function (err, ph) {
     ph.createPage(function (err, page) {
+
       page.onConsoleMessage = function (msg, line, source) {
         console.log('console> ' + msg);
       };
+
       page.onError = function(err) {
         var msgStack = ['ERROR: ' + _.first(err)];
         var trace = _.last(err);
@@ -32,10 +28,12 @@ var getPage = function (url, callback) {
         }
         console.error(msgStack.join("\n"));
       };
+
       var done = function () { // give cleanup function.
         page.close();
         ph.exit(0);
       };
+
       page.open(url, function (status) {
         page.injectJs('jquery-1.10.2.min.js');
         page.injectJs('underscore-min.js');
@@ -59,7 +57,7 @@ var getTeamNames = function (options, callback) {
     options = {};
   }
 
-  if (options.year >= 2009 && (options.division == 'college-mixed' || options.division == 'youth-all' || 
+  if (options.year >= 2009 && (options.division == 'college-mixed' || options.division == 'youth-all' ||
                                options.division == 'all' || options.division == 'college-all')) {
     callback('No data available for this division and year.', []);
     return;
@@ -92,7 +90,7 @@ var getTeamNames = function (options, callback) {
  * @param  {Function} callback (err, team)
  */
 var getDataForTeam = function (division, year, id, callback) {
-  if (year >= 2009 && (division == 'college-mixed' || division == 'youth-all' || 
+  if (year >= 2009 && (division == 'college-mixed' || division == 'youth-all' ||
                        division == 'all' || division == 'college-all')) {
     callback('No data available for this division and year.', null);
     return;
