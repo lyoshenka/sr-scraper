@@ -1,5 +1,91 @@
+
+var _         = require('underscore')
+  , async     = require('async')
+  , db        = require('monk')('localhost/scraper')
+  , urls      = require('./urls')
+  , getPage   = require('./getPage')
+  ;
+
+
 /**
- * Page to scrape a particular team page from SR
+ * Scrape a list of all teams for a division
+ * @return {Array} teams
+ * [
+ *     {
+ *         id   : String,
+ *         name : String
+ *      }
+ * ]
+ */
+var phantomParseTeamListPage = function () {
+
+    var teams = [];
+
+    if ($('#__gwt_historyFrame').length) { // new style
+      $('td.teamhalf select.gwt-ListBox option').each(function() {
+        teams.push({
+          id   : $(this).val(),
+          name : $(this).text()
+        });
+      });
+    }
+    else { // old style
+      $('select[name="team"] option').each(function() {
+        var lastParen = $(this).text().lastIndexOf('(');
+        teams.push({
+          id   : $(this).val(),
+          name : lastParen == -1 ? $(this).text() : $(this).text().substr(0,lastParen-1) // -1 because there's a space before it too
+        });
+      });
+    }
+
+    return teams;
+};
+
+
+/**
+ * Fetch a list of all teams for a particular division. Returns an array
+ * of teams in the form: { id : String, name : String }
+ *
+ * @param  {Object}   options  [description]
+ * @param  {Function} callback (err, teams)
+ */
+var getTeamNames = function (options, callback) {
+  if (_.isFunction(options)) {
+    callback = options;
+    options = {};
+  }
+
+  if (options.year >= 2009 && (options.division == 'college-mixed' || options.division == 'youth-all' ||
+                               options.division == 'all' || options.division == 'college-all')) {
+    callback('No data available for this division and year.', []);
+    return;
+  }
+
+  var url = urls.teams(options.division, options.year);
+
+  console.log(url);
+
+  getPage(url, function (err, page, done) {
+    if (err) {
+      console.log(err);
+      callback(err, []);
+      done();
+    }
+    else {
+      page.evaluate(phantomParseTeamListPage, function (err, teams){
+        callback(err, teams);
+        done();
+      });
+    }
+  });
+};
+
+
+
+
+/**
+ * Scrape a particular team page from SR
  * @return {Object} team
  * {
  *     section : String,
@@ -30,9 +116,7 @@
  *     ]
  * }
  */
-
-
-module.exports = function () {
+phantomParseTeamPage =  function () {
 
     var oldStyle  = !$('#__gwt_historyFrame').length, // is this the old scorereporter style (pre-2010), or the new one
         team      = getInfo(oldStyle);
@@ -203,4 +287,70 @@ module.exports = function () {
             };
         }
     }
+};
+
+
+
+
+/**
+ * Get a particular team's results.
+ * @param  {String}   division
+ * @param  {String}   id
+ * @param  {Function} callback (err, team)
+ */
+var getDataForTeam = function (division, year, id, callback) {
+  if (year >= 2009 && (division == 'college-mixed' || division == 'youth-all' ||
+                       division == 'all' || division == 'college-all')) {
+    callback('No data available for this division and year.', null);
+    return;
+  }
+
+  var url = urls.team(division, year, id);
+
+  getPage(url, function (err, page, done) {
+    // TODO: move this to an inject function.
+    page.evaluate(phantomParseTeamPage, function (err, team) {
+      if (!err) {
+        _.extend(team, { id         : id,
+                         year       : year,
+                         division   : division });
+      }
+      callback(err, team);
+      done();
+    });
+  });
+};
+
+module.exports = function (division, year) {
+  var teamsDb = db.get(division+'_'+year);
+
+  getTeamNames({ division : division, year : year }, function (err, results) {
+    if (err) {
+      console.log(err);
+      return;
+    }
+
+    var numTeams = results.length,
+        count = 0;
+
+    console.log('Found ' + numTeams + ' teams for ' + division + ' ' + year);
+
+    async.forEachSeries(results, function (team, cb) {
+      teamsDb.findOne({ id: team.id }).on('success', function (teamInDb) {
+        count += 1;
+        var message = '(' + count + '/' + numTeams + ') ' + division + ' ' + year + ' ' + team.name;
+        if (teamInDb) {
+          console.log(message + ' ALREADY EXISTS');
+          cb();
+        }
+        else {
+          console.log(message);
+          getDataForTeam(division, year, team.id, function (err, fullTeam) {
+            teamsDb.insert(fullTeam);
+            cb();
+          });
+        }
+      });
+    });
+  });
 };
