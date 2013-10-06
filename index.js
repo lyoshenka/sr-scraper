@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 
-var _        = require('underscore')
-  , async    = require('async')
-  , phantom  = require('phantomjs')
-  , urls     = require('./urls')
-  , teamEval = require('./team')
+var _         = require('underscore')
+  , async     = require('async')
+//  , phantom   = require('phantom')
+  , phantom   = require('node-phantom-ws')
+  , urls      = require('./urls')
+  , teamEval  = require('./team')
   , teamsEval = require('./teams')
+  , db        = require('monk')('localhost/scraper')
   ;
 
 var jquery     = "http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js",
@@ -14,18 +16,30 @@ var jquery     = "http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.j
 var plugins = [jquery, underscore];
 
 var getPage = function (url, callback) {
-  phantom.create(function (client) {
-    client.createPage(function (page) {
+  phantom.create(function (err, ph) {
+    ph.createPage(function (err, page) {
+      page.onConsoleMessage = function (msg, line, source) {
+        console.log('console> ' + msg);
+      };
+      page.onError = function(err) {
+        var msgStack = ['ERROR: ' + _.first(err)];
+        var trace = _.last(err);
+        if (trace && trace.length) {
+          msgStack.push('TRACE:');
+          trace.forEach(function(t) {
+            msgStack.push(' -> ' + t.file + ': ' + t.line + (t.function ? ' (in function "' + t.function + '")' : ''));
+          });
+        }
+        console.error(msgStack.join("\n"));
+      };
       var done = function () { // give cleanup function.
-        page.release();
-        client.exit();
+        page.close();
+        ph.exit(0);
       };
       page.open(url, function (status) {
-        async.map(
-          plugins,
-          function (item, cb) { page.includeJs(item, function () { cb(); }); },
-          function onComplete() { return callback(null, page, done); }
-        );
+        page.injectJs('jquery-1.10.2.min.js');
+        page.injectJs('underscore-min.js');
+        callback(null,page,done);
       });
     });
   });
@@ -47,17 +61,26 @@ var getTeamNames = function (options, callback) {
 
   if (options.year >= 2009 && (options.division == 'college-mixed' || options.division == 'youth-all' || 
                                options.division == 'all' || options.division == 'college-all')) {
-    callback('No data available for this division and year.', null);
+    callback('No data available for this division and year.', []);
     return;
   }
 
   var url = urls.teams(options.division, options.year);
 
+  console.log(url);
+
   getPage(url, function (err, page, done) {
-    page.evaluate(teamsEval, function (teams) {
-      callback(null, teams);
+    if (err) {
+      console.log(err);
+      callback(err, []);
       done();
-    });
+    }
+    else {
+      page.evaluate(teamsEval, function (err, teams){
+        callback(err, teams);
+        done();
+      });
+    }
   });
 };
 
@@ -79,11 +102,13 @@ var getDataForTeam = function (division, year, id, callback) {
 
   getPage(url, function (err, page, done) {
     // TODO: move this to an inject function.
-    page.evaluate(teamEval, function (team) {
-      _.extend(team, { id         : id,
-                       year       : year,
-                       division   : division });
-      callback(null, team);
+    page.evaluate(teamEval, function (err, team) {
+      if (!err) {
+        _.extend(team, { id         : id,
+                         year       : year,
+                         division   : division });
+      }
+      callback(err, team);
       done();
     });
   });
@@ -92,30 +117,31 @@ var getDataForTeam = function (division, year, id, callback) {
 
 var generate = function (division, year) {
 
-  // var teams = db.get(division+'_'+year);
+  var teamsDb = db.get(division+'_'+year);
 
   getTeamNames({ division : division, year : year }, function (err, results) {
-
-    console.log(err, results);
-    return;
+    if (err) {
+      console.log(err);
+      return;
+    }
 
     var numTeams = results.length,
         count = 0;
+
     console.log('Found ' + numTeams + ' teams for ' + division + ' ' + year);
 
     async.forEachSeries(results, function (team, cb) {
-
-      teams.findOne({ id: team.id }).on('success', function (teamInDb) {
+      teamsDb.findOne({ id: team.id }).on('success', function (teamInDb) {
         count += 1;
         var message = '(' + count + '/' + numTeams + ') ' + division + ' ' + year + ' ' + team.name;
         if (teamInDb) {
-//                    console.log(message + ' ALREADY EXISTS');
+          console.log(message + ' ALREADY EXISTS');
           cb();
         }
         else {
           console.log(message);
-          api.getDataForTeam(division, year, team.id, function (err, fullTeam) {
-            teams.insert(fullTeam);
+          getDataForTeam(division, year, team.id, function (err, fullTeam) {
+            teamsDb.insert(fullTeam);
             cb();
           });
         }
@@ -124,4 +150,29 @@ var generate = function (division, year) {
   });
 };
 
-generate('mixed', 2013);
+var year = 2013,
+    set = 1;
+
+if (set == 1) {
+    generate('open', year);
+    // generate('mixed', year);
+    // generate('womens', year);
+    // generate('masters', year);
+} else if (set == 2) {
+    generate('college-open', year);
+    generate('college-womens', year);
+    if (year < 2009) {
+        generate('college-mixed', year);
+    }
+} else if (set == 3) {
+    generate('youth-open', year);
+    generate('youth-girls', year);
+    generate('youth-mixed', year);
+    generate('youth-middleschool', year);
+} else if (set == 4 && year < 2009) {
+    generate('college-all', year);
+    generate('all', year);
+    generate('youth-all', year);
+} else {
+    console.log('No set with that number.');
+}

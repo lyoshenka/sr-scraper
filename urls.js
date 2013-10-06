@@ -48,7 +48,7 @@ exports.teams = function (division, year) {
     validateYear(year);
 
     var route = 'teamsNew';
-    if (year === 2012) {
+    if (year === 2013) {
         year = '';
     }
     else if (year <= 2009) {
@@ -64,7 +64,7 @@ exports.team = function (division, year, id) {
     validateYear(year);
 
     var route = 'teamNew';
-    if (year === 2012) {
+    if (year === 2013) {
         year = '';
     }
     else if (year <= 2009) {

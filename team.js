@@ -32,18 +32,15 @@
  */
 
 
-var _ = require('underscore');
-
 module.exports = function () {
 
-    var oldStyle  = !$('#__gwt_historyFrame').length, // is this the old scorereporter style (pre-2010), or the new one 
+    var oldStyle  = !$('#__gwt_historyFrame').length, // is this the old scorereporter style (pre-2010), or the new one
         team      = getInfo(oldStyle);
 
     team.roster = getRoster(oldStyle);
     team.games = getGames(oldStyle);
+
     return team;
-
-
 
     function getGames(oldStyle) {
         var scores = oldStyle ? $('form td[valign="top"] tr') : $('.scores tr');
