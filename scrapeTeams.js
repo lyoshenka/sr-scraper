@@ -322,7 +322,7 @@ var getDataForTeam = function (division, year, id, callback) {
 };
 
 module.exports = function (division, year) {
-  var teamsDb = db.get(division+'_'+year);
+  var teamsDb = db.get('teams_'+division+'_'+year);
 
   getTeamNames({ division : division, year : year }, function (err, results) {
     if (err) {

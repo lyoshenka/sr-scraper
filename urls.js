@@ -5,7 +5,12 @@ var _        = require('underscore'),
       "teamsNew" : "http://scores.usaultimate.org/scores{{ year }}/#{{ division }}/teams",
       "teamsOld" : "http://ultimate.scorereport.net/{{ year }}/scores.cgi?page=2&div={{ division }}",
       "teamNew"  : "http://scores.usaultimate.org/scores{{ year }}/#{{ division }}/team/{{ id }}",
-      "teamOld"  : "http://ultimate.scorereport.net/{{ year }}/scores.cgi?page=3&team={{ id }}"
+      "teamOld"  : "http://ultimate.scorereport.net/{{ year }}/scores.cgi?page=3&team={{ id }}",
+
+      "eventsNew" : "http://scores.usaultimate.org/scores{{ year }}/#{{ division }}/tournaments",
+      "eventsOld" : "http://ultimate.scorereport.net/{{ year }}/scores.cgi?page=2&div={{ division }}",
+      "eventNew"  : "http://scores.usaultimate.org/scores{{ year }}/#{{ division }}/tournament/{{ id }}",
+      "eventOld"  : "http://ultimate.scorereport.net/{{ year }}/scores.cgi?page=3&team={{ id }}"
     },
     divisions = [
       'open', 'womens', 'mixed', 'masters', 'college-open', 'college-womens', 'college-mixed',
@@ -56,6 +61,20 @@ exports.teams = function (division, year) {
   return mustache.render(urls[route], { division : division, year : year });
 };
 
+exports.events = function (division, year) {
+  validateDivision(division);
+  validateYear(year);
+
+  var route = 'eventsNew';
+  if (year === 2013) {
+    year = '';
+  }
+  else if (year <= 2009) {
+    division = oldDivs[division];
+    route = 'eventsOld';
+  }
+  return mustache.render(urls[route], { division : division, year : year });
+};
 
 exports.team = function (division, year, id) {
   validateDivision(division);
@@ -67,6 +86,20 @@ exports.team = function (division, year, id) {
   }
   else if (year <= 2009) {
     route = 'teamOld';
+  }
+  return mustache.render(urls[route], { division : division, year : year, id : id });
+};
+
+exports.event = function (division, year, id) {
+  validateDivision(division);
+  validateYear(year);
+
+  var route = 'eventNew';
+  if (year === 2013) {
+    year = '';
+  }
+  else if (year <= 2009) {
+    route = 'eventOld';
   }
   return mustache.render(urls[route], { division : division, year : year, id : id });
 };
