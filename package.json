@@ -7,6 +7,6 @@
     "mustache": "~0.7.2",
     "async": "~0.2.9",
     "monk": "~0.7.1",
-    "node-phantom-ws": "~1.0.10",
+    "node-phantom-ws": "~1.0.10"
   }
 }
