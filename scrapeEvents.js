@@ -95,6 +95,20 @@ phantomParseEventPage =  function (year) {
 
     return event;
 
+    function bracketSize(bracket) {
+      var max = 0;
+      $(bracket).find('tr').each(function() {
+        var width = 0;
+        $(this).find('td').each(function() {
+          width += $(this).attr('rowspan') ? parseInt($(this).attr('rowspan')) : 1;
+        });
+        if (width > max) {
+          max = width;
+        }
+      });
+      return max;
+    }
+
     function getStages() {
       var pools = [];
       $('table.pool').each(function() {
@@ -105,6 +119,7 @@ phantomParseEventPage =  function (year) {
         if (pool.type === 'pool') {
           var teams = [],
               games = [],
+              currDay,
               final_seed = 1;
 
           $(this).find('table.poolstandings tr').each(function() {
@@ -124,8 +139,10 @@ phantomParseEventPage =  function (year) {
           });
           pool.teams = JSON.stringify(teams);
 
+          currDay = null;
           $(this).find('table.poolresults tr').each(function() {
             if (!$(this).find('.editlabel').length) {
+              currDay = $(this).find('.tc').text();
               return; // header
             }
             var currGame = {};
@@ -138,6 +155,7 @@ phantomParseEventPage =  function (year) {
               else if (text.indexOf('-') >= 0) {
                 currGame.score = text.trim();
                 currGame.time = time;
+                currGame.day = currDay;
                 games.push(currGame);
                 currGame = {};
               }
@@ -150,7 +168,9 @@ phantomParseEventPage =  function (year) {
         }
         else {
           pool.numRounds = $(this).find('.bracketdate').length;
-          pool.numTrs = $(this).find('tr').length;
+
+          var bracket = $(this).find('table.bracket');
+          pool.maxCols = bracketSize(bracket);
         }
 
         pools.push(pool);
@@ -240,7 +260,7 @@ phantomParseEventPage =  function (year) {
       if (oldStyle) {
         return {
           ERROR: "old style"
-        }
+        };
       }
       else {
         var info = $('table.tourninfo');
