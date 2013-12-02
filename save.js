@@ -1,5 +1,4 @@
 var fs = require('fs'),
-    sys = require('sys'),
     _ = require('underscore'),
     async = require('async'),
     urls = require('./urls'),
@@ -14,47 +13,73 @@ var division = 'open',
 //   phantom.exit();
 // });
 
+async.eachSeries([2012,2011,2010,2009,2008,2007,2006,2005,2004], function(year, cb1) {
+  async.eachSeries(['open','womens','mixed','masters','all','college-open','college-womens',
+    'college-mixed','college-all' ,'youth-all' ,'youth-open','youth-girls','youth-mixed',
+    'youth-middleschool'], function(division, cb2) {
 
-getEvents(division, year, function (err, results) {
-  if (err) {
-    console.log(err);
-    return;
-  }
+      if (year >= 2009 && _.contains(['all', 'college-all', 'college-mixed', 'youth-all'], division)) {
+        cb2();
+        return;
+      }
 
-  // var save = _.map(results, function(event) { return { division: division, year: year, id: event.id }; });
-  // fs.writeFile('tourneys.json', JSON.stringify(save), function() {
-  //   console.log('saved ' + save.length + ' tourneys.');
-  // });
-  // return;
 
-  console.log('Found ' + results.length + ' tournaments for ' + division + ' ' + year);
+      getEvents(division, year, function (err, results) {
+        if (err) {
+          cb2(err);
+          return;
+        }
 
-  async.eachLimit(results, 2, function (event, cb) {
-    var url = urls.event(division, year, event.id),
-        filename = '/home/grin/code/sr-scraper/events/' + division + '-' + year + '-' + event.id +'.html';
+        // var save = _.map(results, function(event) { return { division: division, year: year, id: event.id }; });
+        // fs.writeFile('tourneys.json', JSON.stringify(save), function() {
+        //   console.log('saved ' + save.length + ' tourneys.');
+        // });
+        // return;
 
-    if (fs.existsSync(filename)) {
-      console.log(division + '-' + year + '-' + event.id + ' EXISTS.');
-      cb();
-      return;
-    }
+        console.log('Found ' + results.length + ' tournaments for ' + division + ' ' + year);
 
-    getPage(url, function (err, page, done) {
-      page.evaluate(function() {
-        return document.documentElement.outerHTML;
-      }, function(err, html) {
-        fs.writeFile(filename, html, function() {
-          console.log('Wrote ' + division + '-' + year + '-' + event.id);
-          done();
-          cb();
+        async.eachLimit(results, 2, function (event, cb) {
+          var url = urls.event(division, year, event.id),
+              filename = '/home/grin/code/sr-scraper/events/' + division + '-' + year + '-' + event.id +'.html';
+
+          if (fs.existsSync(filename)) {
+            console.log(division + '-' + year + '-' + event.id + ' EXISTS.');
+            cb();
+            return;
+          }
+
+          getPage(url, function (err, page, done) {
+            if (err){
+              cb(err);
+              return;
+            }
+            page.evaluate(function() {
+              return document.documentElement.outerHTML;
+            }, function(err, html) {
+              if (err) {
+                cb(err);
+                return;
+              }
+              fs.writeFile(filename, html, function() {
+                console.log('Wrote ' + division + '-' + year + '-' + event.id);
+                done();
+                cb();
+              });
+            });
+          });
+        }, function(err) {
+          cb2(err);
         });
       });
-    });
-  }, function(err) {
-    if (err) throw err;
-    sys.exit();
-  });
-});
+
+
+  }, function(err) { cb1(err); });
+}, function(err) {
+  if (err) throw err;
+  process.exit();
+} );
+
+
 
 
 

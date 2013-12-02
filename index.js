@@ -28,9 +28,9 @@ return;
 
 if (set == 1) {
   scrapeTeams('open', year);
-  // scrapeTeams('mixed', year);
-  // scrapeTeams('womens', year);
-  // scrapeTeams('masters', year);
+  scrapeTeams('mixed', year);
+  scrapeTeams('womens', year);
+  scrapeTeams('masters', year);
 } else if (set == 2) {
     scrapeTeams('college-open', year);
     scrapeTeams('college-womens', year);

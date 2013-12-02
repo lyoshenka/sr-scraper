@@ -31,7 +31,7 @@ module.exports = function (url, callback) {
 
       var done = function () { // give cleanup function.
         page.close();
-        ph.exit(0);
+        ph.exit();
       };
 
       page.open(url, function (status) {
