@@ -6,7 +6,10 @@ var fs = require('fs'),
 
 
 var division = 'open',
-    year = 2013;
+    year = 2013,
+    dir = '/home/grin/code/sr-scraper/events/';
+
+fs.mkdir(dir, function() {});
 
 // page.open('http://scores.usaultimate.org/scores/#mixed/tournament/12218', function () {
 //   fs.write('/home/grin/code/sr-scraper/janus.html', page.content, 'w');
@@ -40,7 +43,7 @@ async.eachSeries([2013,2012,2011,2010,2009,2008,2007,2006,2005,2004], function(y
 
         async.eachLimit(results, 2, function (event, cb) {
           var url = urls.event(division, year, event.id),
-              filename = '/home/grin/code/sr-scraper/events/' + division + '-' + year + '-' + event.id +'.html';
+              filename = dir + division + '-' + year + '-' + event.id +'.html';
 
           if (fs.existsSync(filename)) {
             console.log(division + '-' + year + '-' + event.id + ' EXISTS.');
