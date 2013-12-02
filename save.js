@@ -13,7 +13,7 @@ var division = 'open',
 //   phantom.exit();
 // });
 
-async.eachSeries([2012,2011,2010,2009,2008,2007,2006,2005,2004], function(year, cb1) {
+async.eachSeries([2013,2012,2011,2010,2009,2008,2007,2006,2005,2004], function(year, cb1) {
   async.eachSeries(['open','womens','mixed','masters','all','college-open','college-womens',
     'college-mixed','college-all' ,'youth-all' ,'youth-open','youth-girls','youth-mixed',
     'youth-middleschool'], function(division, cb2) {
