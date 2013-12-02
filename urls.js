@@ -8,9 +8,9 @@ var _        = require('underscore'),
       "teamOld"  : "http://ultimate.scorereport.net/{{ year }}/scores.cgi?page=3&team={{ id }}",
 
       "eventsNew" : "http://scores.usaultimate.org/scores{{ year }}/#{{ division }}/tournaments",
-      "eventsOld" : "http://ultimate.scorereport.net/{{ year }}/scores.cgi?page=2&div={{ division }}",
+      "eventsOld" : "http://ultimate.scorereport.net/{{ year }}/tourn.cgi?div={{ division }}",
       "eventNew"  : "http://scores.usaultimate.org/scores{{ year }}/#{{ division }}/tournament/{{ id }}",
-      "eventOld"  : "http://ultimate.scorereport.net/{{ year }}/scores.cgi?page=3&team={{ id }}"
+      "eventOld"  : "http://ultimate.scorereport.net/{{ year }}/tourn.cgi?div={{ division }}&id={{ id }}"
     },
     divisions = [
       'open', 'womens', 'mixed', 'masters', 'college-open', 'college-womens', 'college-mixed',

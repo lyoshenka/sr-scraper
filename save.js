@@ -16,7 +16,7 @@ fs.mkdir(dir, function() {});
 //   phantom.exit();
 // });
 
-async.eachSeries([2013,2012,2011,2010,2009,2008,2007,2006,2005,2004], function(year, cb1) {
+async.eachSeries([/*2013,2012,2011,2010,*/2009,2008,2007,2006,2005,2004], function(year, cb1) {
   async.eachSeries(['open','womens','mixed','masters','all','college-open','college-womens',
     'college-mixed','college-all' ,'youth-all' ,'youth-open','youth-girls','youth-mixed',
     'youth-middleschool'], function(division, cb2) {
@@ -104,19 +104,19 @@ function getEvents(division, year, callback) {
       if ($('#__gwt_historyFrame').length) { // new style
         $('tr.tlist, tr.tsanc').each(function() {
           tournaments.push({
-            id   : this.onclick.toString().match(/tournament\/(\d+)/)[1],
+            id : this.onclick.toString().match(/tournament\/(\d+)/)[1],
           });
         });
       }
       else { // old style
-        console.log('old style');
-        // $('select[name="team"] option').each(function() {
-        //   var lastParen = $(this).text().lastIndexOf('(');
-        //   teams.push({
-        //     id   : $(this).val(),
-        //     name : lastParen == -1 ? $(this).text() : $(this).text().substr(0,lastParen-1) // -1 because there's a space before it too
-        //   });
-        // });
+        $('body > center > center > table > tbody > tr[onclick]').each(function() {
+          if ($(this).hasClass('dark')) {
+            return; // header
+          }
+          tournaments.push({
+            id : parseInt(this.onclick.toString().match(/id=(\d+)/)[1])
+          });
+        });
       }
 
       return tournaments;
