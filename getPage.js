@@ -1,11 +1,17 @@
-var _         = require('underscore')
-  , phantom   = require('node-phantom-ws')
-  ;
+var _        = require('underscore'),
+    phantom  = require('node-phantom-ws');
 
 // getPage
 module.exports = function (url, callback) {
   phantom.create(function (err, ph) {
+    if (err) throw err;
+
     ph.createPage(function (err, page) {
+      if (err) throw err;
+
+      page.settings = {
+        userAgent: "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; Trident/4.0)"
+      };
 
       page.onConsoleMessage = function (msg, line, source) {
         console.log('console> ' + msg);

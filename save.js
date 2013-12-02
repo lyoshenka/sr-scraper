@@ -1,4 +1,5 @@
 var fs = require('fs'),
+    sys = require('sys'),
     _ = require('underscore'),
     async = require('async'),
     urls = require('./urls'),
@@ -20,10 +21,13 @@ getEvents(division, year, function (err, results) {
     return;
   }
 
-  var numEvents = results.length,
-      count = 0;
+  // var save = _.map(results, function(event) { return { division: division, year: year, id: event.id }; });
+  // fs.writeFile('tourneys.json', JSON.stringify(save), function() {
+  //   console.log('saved ' + save.length + ' tourneys.');
+  // });
+  // return;
 
-  console.log('Found ' + numEvents + ' tournaments for ' + division + ' ' + year);
+  console.log('Found ' + results.length + ' tournaments for ' + division + ' ' + year);
 
   async.eachLimit(results, 2, function (event, cb) {
     var url = urls.event(division, year, event.id),
@@ -41,12 +45,14 @@ getEvents(division, year, function (err, results) {
       }, function(err, html) {
         fs.writeFile(filename, html, function() {
           console.log('Wrote ' + division + '-' + year + '-' + event.id);
+          done();
           cb();
         });
       });
     });
   }, function(err) {
     if (err) throw err;
+    sys.exit();
   });
 });
 
