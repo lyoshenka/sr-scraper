@@ -5,16 +5,9 @@ var fs = require('fs'),
     getPage   = require('./getPage');
 
 
-var division = 'open',
-    year = 2013,
-    dir = '/home/grin/code/sr-scraper/events/';
+var dir = '/home/grin/code/sr-scraper/events/';
 
 fs.mkdir(dir, function() {});
-
-// page.open('http://scores.usaultimate.org/scores/#mixed/tournament/12218', function () {
-//   fs.write('/home/grin/code/sr-scraper/janus.html', page.content, 'w');
-//   phantom.exit();
-// });
 
 async.eachSeries([/*2013,2012,2011,2010,*/2009,2008,2007,2006,2005,2004], function(year, cb1) {
   async.eachSeries(['open','womens','mixed','masters','all','college-open','college-womens',
@@ -33,13 +26,16 @@ async.eachSeries([/*2013,2012,2011,2010,*/2009,2008,2007,2006,2005,2004], functi
           return;
         }
 
-        // var save = _.map(results, function(event) { return { division: division, year: year, id: event.id }; });
-        // fs.writeFile('tourneys.json', JSON.stringify(save), function() {
-        //   console.log('saved ' + save.length + ' tourneys.');
-        // });
-        // return;
-
         console.log('Found ' + results.length + ' tournaments for ' + division + ' ' + year);
+
+        var filename = dir + division + '-' + year + '-events.json';
+
+        fs.writeFile(filename, JSON.stringify(results), function() {
+          console.log('Wrote ' + division + '-' + year + '-events.json');
+          cb2();
+        });
+
+        return;
 
         async.eachLimit(results, 2, function (event, cb) {
           var url = urls.event(division, year, event.id),
@@ -103,8 +99,36 @@ function getEvents(division, year, callback) {
 
       if ($('#__gwt_historyFrame').length) { // new style
         $('tr.tlist, tr.tsanc').each(function() {
+          var self = $(this),
+            notes = self.find('td.tournamentnotes'),
+            link = notes.find('a').length ?
+                   notes.find('a').attr('href').replace(/^http:\/\/http:\/\//,'http://') :
+                   null,
+            fee = null,
+            feeDue = null,
+            feeStr = $.trim(notes.text());
+
+          if (link)
+          {
+            feeStr = $.trim(feeStr.substr(link.length));
+          }
+          var matches = feeStr.match(/^Fee\: \$(\d+) Due\: (\w+ \d+)/);
+          if (matches)
+          {
+            fee = matches[1];
+            feeDue = matches[2];
+          }
+
           tournaments.push({
-            id : this.onclick.toString().match(/tournament\/(\d+)/)[1],
+            id   : this.onclick.toString().match(/tournament\/(\d+)/)[1],
+            name : self.find('td.tournamentname').text(),
+            days : self.find('td.tournamentdays').text(),
+            location: self.find('td.tournamentloc').text(),
+            teams: self.find('td.tournamentteams').text(),
+            link: link,
+            cost: fee,
+            costDue: feeDue,
+            sanctioned : self.hasClass('tsanc')
           });
         });
       }
@@ -113,8 +137,18 @@ function getEvents(division, year, callback) {
           if ($(this).hasClass('dark')) {
             return; // header
           }
+
+          var $this = $(this),
+              notes = $this.find('> td:nth-child(5)');
+
           tournaments.push({
-            id : parseInt(this.onclick.toString().match(/id=(\d+)/)[1])
+            id : parseInt(this.onclick.toString().match(/id=(\d+)/)[1]),
+            name: $this.find('> td:nth-child(1)').text(),
+            winner: $this.find('> td:nth-child(2)').text(),
+            location: $this.find('> td:nth-child(3)').text(),
+            teams: $this.find('> td:nth-child(4)').text(),
+            link: notes.find('a').text(),
+            details: notes.find('table tr:nth-child(2)').text()
           });
         });
       }
